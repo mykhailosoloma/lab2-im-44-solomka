@@ -1,5 +1,8 @@
+import codecs
+import sys
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 DIGITS = frozenset("0123456789")
 EQUALS = "="
@@ -110,3 +113,33 @@ def calculate(keys):
     for key in keys:
         handle_key_press(state, key)
     return state.screen
+
+
+def read_input(path):
+    data = Path(path).read_bytes()
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return data.decode("utf-16")
+    return data.decode("utf-8-sig")
+
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) not in (1, 2):
+        print("Usage: python calculator.py <input file> [<output file>]", file=sys.stderr)
+        return 2
+
+    try:
+        result = calculate(parse(read_input(args[0])))
+        output = f"{result}\n"
+        if len(args) == 2:
+            Path(args[1]).write_text(output, encoding="utf-8")
+        else:
+            sys.stdout.write(output)
+    except (CalculatorError, OSError, UnicodeDecodeError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
