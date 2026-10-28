@@ -27,6 +27,10 @@ class InvalidSequenceError(CalculatorError):
     pass
 
 
+class DivisionByZeroError(CalculatorError):
+    pass
+
+
 def parse(text):
     line = text.rstrip("\r\n")
     if not line:
@@ -95,6 +99,8 @@ def handle_key_press(state, key):
         state.first_number = state.screen
         state.op = key
     else:
+        if state.op == "/" and state.screen == 0:
+            raise DivisionByZeroError("Division by zero")
         state.screen = OPERATIONS[state.op](state.first_number, state.screen)
     state.stage = next_stage
 
