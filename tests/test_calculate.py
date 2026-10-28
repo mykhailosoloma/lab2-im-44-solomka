@@ -1,6 +1,12 @@
 import pytest
 
-from calculator import InvalidKeyError, InvalidSequenceError, calculate, parse
+from calculator import (
+    DivisionByZeroError,
+    InvalidKeyError,
+    InvalidSequenceError,
+    calculate,
+    parse,
+)
 
 
 def calc(text):
@@ -112,6 +118,23 @@ def test_forbidden_key_sequence_is_rejected(text):
 def test_input_with_unknown_key_is_rejected(text):
     with pytest.raises(InvalidKeyError):
         calc(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("5 / 0 =", id="number-by-zero"),
+        pytest.param("0 / 0 =", id="zero-by-zero"),
+        pytest.param("5 / 0 0 =", id="zero-typed-twice"),
+    ],
+)
+def test_division_by_zero_is_rejected(text):
+    with pytest.raises(DivisionByZeroError):
+        calc(text)
+
+
+def test_zero_divisor_is_shown_until_equals_is_pressed():
+    assert calc("5 / 0") == 0
 
 
 def test_calculate_accepts_list_of_key_names():

@@ -171,6 +171,7 @@ def test_forbidden_key_error_names_the_key():
         pytest.param("1 2 + 3", "*", id="chained-operation"),
         pytest.param("1 2 + 3 =", "4", id="digit-after-equals"),
         pytest.param("1 2 + 3", "a", id="unknown-key"),
+        pytest.param("1 2 / 0", "=", id="division-by-zero"),
     ],
 )
 def test_rejected_key_leaves_state_unchanged(keys, bad_key):
