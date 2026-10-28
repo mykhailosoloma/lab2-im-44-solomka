@@ -1,6 +1,14 @@
+from dataclasses import replace
+
 import pytest
 
-from calculator import CalculatorState, handle_key_press
+from calculator import (
+    CalculatorError,
+    CalculatorState,
+    InvalidKeyError,
+    InvalidSequenceError,
+    handle_key_press,
+)
 
 DIGITS = list("0123456789")
 OPERATIONS = ["+", "-", "*", "/"]
@@ -106,3 +114,68 @@ def test_division_divides_first_number_by_second():
     state = state_after("2 / 8")
     handle_key_press(state, "=")
     assert state.screen == 0
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param("12", id="two-digits-in-one-key"),
+        pytest.param("", id="empty"),
+        pytest.param("a", id="letter"),
+        pytest.param("C", id="clear-key"),
+        pytest.param("%", id="unsupported-operation"),
+        pytest.param(".", id="decimal-point"),
+        pytest.param("x", id="x-instead-of-multiply"),
+        pytest.param("÷", id="division-sign"),
+        pytest.param("+-", id="two-operations-in-one-key"),
+        pytest.param("==", id="double-equals"),
+        pytest.param(" 1", id="digit-with-space"),
+        pytest.param("٣", id="arabic-indic-digit"),
+        pytest.param("²", id="superscript-two"),
+    ],
+)
+def test_unknown_key_is_rejected(key):
+    with pytest.raises(InvalidKeyError):
+        handle_key_press(CalculatorState(), key)
+
+
+@pytest.mark.parametrize("keys", ["", "1", "1 +", "1 + 2", "1 + 2 ="])
+def test_unknown_key_is_reported_at_any_stage(keys):
+    state = state_after(keys)
+    with pytest.raises(InvalidKeyError):
+        handle_key_press(state, "a")
+
+
+def test_unknown_key_error_names_the_key():
+    with pytest.raises(InvalidKeyError, match="'a'"):
+        handle_key_press(CalculatorState(), "a")
+
+
+@pytest.mark.parametrize("op", OPERATIONS)
+def test_operation_before_any_digit_is_rejected(op):
+    with pytest.raises(InvalidSequenceError):
+        handle_key_press(CalculatorState(), op)
+
+
+def test_forbidden_key_error_names_the_key():
+    with pytest.raises(InvalidSequenceError, match="'='"):
+        handle_key_press(CalculatorState(), "=")
+
+
+@pytest.mark.parametrize(
+    "keys, bad_key",
+    [
+        pytest.param("", "+", id="operation-first"),
+        pytest.param("1 2", "=", id="equals-without-operation"),
+        pytest.param("1 2 +", "-", id="second-operation-in-a-row"),
+        pytest.param("1 2 + 3", "*", id="chained-operation"),
+        pytest.param("1 2 + 3 =", "4", id="digit-after-equals"),
+        pytest.param("1 2 + 3", "a", id="unknown-key"),
+    ],
+)
+def test_rejected_key_leaves_state_unchanged(keys, bad_key):
+    state = state_after(keys)
+    before = replace(state)
+    with pytest.raises(CalculatorError):
+        handle_key_press(state, bad_key)
+    assert state == before

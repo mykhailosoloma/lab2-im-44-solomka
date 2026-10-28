@@ -1,6 +1,6 @@
 import pytest
 
-from calculator import calculate, parse
+from calculator import InvalidKeyError, InvalidSequenceError, calculate, parse
 
 
 def calc(text):
@@ -79,6 +79,39 @@ def test_product_of_large_numbers_is_exact():
 )
 def test_result_is_int_not_float(text):
     assert type(calc(text)) is int
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("+ 5 =", id="operation-before-first-number"),
+        pytest.param("=", id="equals-first"),
+        pytest.param("5 =", id="equals-without-operation"),
+        pytest.param("5 + =", id="equals-right-after-operation"),
+        pytest.param("5 + - 3 =", id="two-operations-in-a-row"),
+        pytest.param("5 + 3 - 2 =", id="chained-operations"),
+        pytest.param("5 + 3 = 2", id="digit-after-equals"),
+        pytest.param("5 + 3 = + 2 =", id="operation-after-equals"),
+        pytest.param("5 + 3 = =", id="equals-twice"),
+    ],
+)
+def test_forbidden_key_sequence_is_rejected(text):
+    with pytest.raises(InvalidSequenceError):
+        calc(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("12 + 3 =", id="multi-digit-key"),
+        pytest.param("1 2 % 3 =", id="unsupported-operation"),
+        pytest.param("1 . 5", id="decimal-point"),
+        pytest.param("1\t+\t2", id="tab-separated"),
+    ],
+)
+def test_input_with_unknown_key_is_rejected(text):
+    with pytest.raises(InvalidKeyError):
+        calc(text)
 
 
 def test_calculate_accepts_list_of_key_names():
